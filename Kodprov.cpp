@@ -24,34 +24,41 @@ public:
 
 	void Connect(const std::string& host, const std::string& port)
 	{
-		asio::ip::tcp::resolver resolver(m_IOContext);
-		// Resolves host and service names into a list of endpoint entries
-		auto endpoints = resolver.resolve(host, port);
+		try
+		{
+			asio::ip::tcp::resolver resolver(m_IOContext);
+			// Resolves host and service names into a list of endpoint entries
+			auto endpoints = resolver.resolve(host, port);
 
-		// Attempts to connect a socket to one of a sequence of endpoints, until a connection is successfully established
-		asio::async_connect(m_Socket, endpoints,
-			[this](const std::error_code& e, asio::ip::tcp::endpoint)
-			{
-				if (!e)
+			// Attempts to connect a socket to one of a sequence of endpoints, until a connection is successfully established
+			asio::async_connect(m_Socket, endpoints,
+				[this](const std::error_code& e, asio::ip::tcp::endpoint)
 				{
-					Read();
-					Write();
-				}
-				else
-				{
-					std::clog << e.message() << std::endl;
-				}
-			});
+					if (!e)
+					{
+						Read();
+						Write();
+					}
+					else
+					{
+						std::clog << e.message() << std::endl;
+					}
+				});
 
-		m_IOContext.run();
+			m_IOContext.run();
+		}
+		catch (const std::exception& e)
+		{
+			std::clog << e.what() << std::endl;
+		}
 	}
 
 private:
 	// Parses data from the server and updates the elemenets in m_Objets according to their new state
 	void Read()
 	{
-		// Asynchronously reads data into specified buffer until buffer's get area contains delimiter character
-		asio::async_read_until(m_Socket, m_Buffer, '\r',
+		// Reads data into specified buffer until buffer's get area contains delimiter character
+		asio::async_read_until(m_Socket, m_Buffer, '\n',
 			[this](const std::error_code& e, std::size_t)
 			{
 				if (!e)
@@ -127,13 +134,11 @@ private:
 					catch (const std::out_of_range& e) {
 						std::clog << e.what() << std::endl;
 					}
+
+					Read();
 				}
 				else
-				{
 					std::clog << e.message() << std::endl;
-				}
-
-				Read();
 			});
 	}
 
@@ -155,7 +160,7 @@ private:
 					for (Object& object : m_Objects)
 					{
 						float distance = sqrt(pow(150 - object.X, 2) + pow(150 - object.Y, 2));
-						uint8_t color[3] = {0x5b, 0x34, 0x6D};
+						uint8_t color[3] = {0x5B, 0x34, 0x6D};
 						if ((object.TYPE == 1 && distance < 50) || (object.TYPE == 3 && distance < 100))
 						{
 							color[1] = 0x31;
